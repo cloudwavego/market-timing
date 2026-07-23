@@ -26,7 +26,7 @@ _ = os.path.abspath(os.path.dirname(__file__))  # 返回当前文件路径
 root_path = os.path.abspath(os.path.join(_, '..'))  # 返回根目录文件夹
 
 # 小组专属数据下载链接：https://pan.baidu.com/s/1Gmr2LCvjcDgpetuLaDlw-w    提取码：gyob
-symbol_data_path = '/Users/xbx/Downloads/swap_binance_1h'
+symbol_data_path = '/Users/luyunbo/quant/data/crypto/coin-binance-candle-csv-1h'
 
 min_amount_df = pd.read_csv(os.path.join(root_path, 'data/合约面值.csv'), encoding='gbk')
 min_amount_dict = {}
