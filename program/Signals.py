@@ -1,8 +1,3 @@
-"""
-币圈择时小组第2期专属代码
-author: 邢不行
-微信: xbx9585
-"""
 from Function import *
 
 
@@ -655,6 +650,5 @@ def signal_bolling_rsi_para_list(m_list=range(20, 1000 + 20, 20), n_list=[i / 10
                 para_list.append(para)  # 将参数累加到para_list
     # ===== 返回参数列表
     return para_list
-
 
 

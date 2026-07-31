@@ -1,8 +1,3 @@
-"""
-币圈择时小组第2期专属代码
-author: 邢不行
-微信: xbx9585
-"""
 from datetime import timedelta, datetime
 
 import Signals
