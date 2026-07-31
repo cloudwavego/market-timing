@@ -97,9 +97,8 @@ def signal_simple_bolling_para_list(m_list=range(20, 1000 + 20, 20),
     return para_list
 
 
-# =====作者邢不行
-# 策略
-def signal_xingbuxing(df, para=[200, 2, 0.05], proportion=1, leverage_rate=1):
+# 策略 bolling_bias_pct
+def signal_bolling_bias_pct(df, para=[200, 2, 0.05], proportion=1, leverage_rate=1):
     """
     针对原始布林策略进行修改。
     bias = close / 均线 - 1
@@ -185,7 +184,7 @@ def signal_xingbuxing(df, para=[200, 2, 0.05], proportion=1, leverage_rate=1):
 
 
 # 策略参数组合
-def signal_xingbuxing_para_list(m_list=range(20, 1000 + 20, 20), n_list=[i / 10 for i in list(np.arange(3, 50 + 2, 2))],
+def signal_bolling_bias_pct_para_list(m_list=range(20, 1000 + 20, 20), n_list=[i / 10 for i in list(np.arange(3, 50 + 2, 2))],
                                 bias_pct_list=[i / 100 for i in list(np.arange(5, 20 + 2, 2))]):
     """
     :param m_list: m值的列表
