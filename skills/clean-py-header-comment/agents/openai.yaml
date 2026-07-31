@@ -1,0 +1,4 @@
+interface:
+  display_name: "Clean Python Header Comment"
+  short_description: "Safely remove module docstrings from Python files"
+  default_prompt: "Use $clean-py-header-comment to remove module-level header docstrings from Python files."
