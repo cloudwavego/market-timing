@@ -61,6 +61,7 @@ evaluate['年化收益'] = evaluate['年化收益'].apply(num_to_pct)
 evaluate['最大回撤'] = evaluate['最大回撤'].apply(num_to_pct)
 
 print(evaluate)
+
 rtn['年化收益/回撤比_超额'] = rtn['年化收益/回撤比'] - rtn['币种原始年化收益/回撤比']
 draw_chart_list = [
     '年化收益/回撤比', '年化收益/回撤比_超额'

@@ -47,6 +47,9 @@ def calculate_by_one_loop(para, df, signal_name, symbol, rule_type, min_amount):
 
     # === 计算实际持仓
     _df = position_for_future(_df)  # 调用函数，计算实际的持仓
+    #判断pos是否为空，即没有信号
+    if _df[_df['pos'] != 0].empty:
+        return pd.DataFrame()
 
     # ===== 计算资金曲线
     # === 计算资金曲线
@@ -79,13 +82,13 @@ def calculate_by_one_loop(para, df, signal_name, symbol, rule_type, min_amount):
 if __name__ == '__main__':
     # ==== 遍历所有的策略
     # 遍历指定的策略
-    for signal_name in ['signal_add_bias']:
+    for signal_name in strategies:
         # 遍历不同的币种
         for symbol in symbol_list:
             # 获取当前币种的最小下单量
             min_amount = min_amount_dict[symbol.replace('-', '')]  # 获取最小下单量
             # 遍历不同的周期
-            for rule_type in ['4H']:
+            for rule_type in rule_types:
                 # ===== 输出一下回测的详情
                 print('开始遍历该策略参数：', signal_name, symbol, rule_type)  # 输出当前要回测的策略名称、币种、回测时间周期
                 # ==== 读入数据
@@ -123,6 +126,7 @@ if __name__ == '__main__':
 
                 # === 获取策略参数组合
                 para_list = getattr(Signals, signal_name + '_para_list')()  # 根据遍历到的策略名称，获取当前策略的遍历参数
+                print(para_list)
 
                 # === 并行回测
                 # 标记开始时间

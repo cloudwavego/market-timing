@@ -387,67 +387,45 @@ def signal_imi_para_list(n_list=generate_fibonacci_sequence(2, 100)):
 
     # ===== 返回参数列表
     return para_list
-    """
-    布林+RSI策略
-    :param df: 原始数据
-    :param para: siganl计算的参数：布林的n, m，rsi的天数
-    :return:
-        返回包含signal的数据
+
+
+def signal_bias36_cr(df, para=[20, 6], proportion=1, leverage_rate=1):
     """
 
+    :param df: 原始数据
+    :param para: siganl计算的参数
+    :param proportion: 止损比例
+    :param leverage_rate: 杠杆倍数
+    :return:
+    """
     # ===== 获取策略参数
-    n = int(para[0])  # 获取参数n，即para第一个元素
-    m = para[1]  # 获取参数m，即para第二个元素
-    window = int(para[2])
+    n = para[0]  # 获取参数n，即para第一个元素
+    bias36_n = para[1]  # 获取参数bias36的参数n，即para第二个元素
+
 
     # ===== 计算指标
-    # 计算均线
-    df['median'] = df['close'].rolling(n, min_periods=1).mean()  # 计算收盘价n个周期的均线，如果K线数据小于n就用K线的数量进行计算
-    # 计算上轨、下轨道
-    df['std'] = df['close'].rolling(n, min_periods=1).std(ddof=0)  # 计算收盘价n日的std，ddof代表标准差自由度
-    df['upper'] = df['median'] + m * df['std']  # 计算上轨
-    df['lower'] = df['median'] - m * df['std']  # 计算下轨
+    df['bias36'] = df['close'].rolling(3, min_periods=1).mean() - df['close'].rolling(6, min_periods=1).mean()
+    df['bias36_ma'] = df['bias36'].rolling(bias36_n, min_periods=1).mean()
 
-    # 计算RSI： N日RSI = A /（A + B）×100
-    # A = N日内收盘涨幅之和
-    # B = N日内收盘跌幅之和（取正值）
-    # 计算价格变化
-    delta = df['close'].diff()
-    # 将涨跌幅分为正变化和负变化
-    gain = delta.where(delta > 0, 0)
-    loss = -delta.where(delta < 0, 0)
-    # 计算平均涨幅和平均跌幅
-    avg_gain = gain.rolling(window=window, min_periods=1).mean()
-    avg_loss = loss.rolling(window=window, min_periods=1).mean()
-    # 计算RS值
-    rs = avg_gain / avg_loss
-    # 计算RSI值
-    df['rsi'] = 100 - (100 / (1 + rs))
+    df['TYP'] = (df['high'] + df['low'] + df['close']) / 3  # 计算TYP
+    df['H'] = np.where(df['high'] - df['TYP'].shift(1) > 0, df['high'] - df['TYP'].shift(1), 0)  # 计算H
+    df['L'] = np.where(df['TYP'].shift(1) - df['low'] > 0, df['TYP'].shift(1) - df['low'], 0)  # 计算L
+    df['Cr_%s' % (n)] = df['H'].rolling(n).sum() / df['L'].rolling(n, min_periods=1).sum() * 100  # 计算CR因子
 
     # ===== 找出交易信号
-    # === 找出做多信号
-    # 价格高于上轨，RSI高于75，多投，损益比1：1.5-2
-    condition1 = df['close'] > df['upper']  # 当前K线的收盘价 > 上轨
-    condition2 = df['close'].shift(1) <= df['upper'].shift(1)  # 之前K线的收盘价 <= 上轨
-    condition3 = df['rsi'] >= 75
-    df.loc[condition1 & condition2 & condition3, 'signal_long'] = 1  # 将产生做多信号的那根K线的signal设置为1，1代表做多
+    # === 找出做多信号 CR 上穿 200，三六乖离上穿其均线
+    condition1 = df['Cr_%s' % str(n)] > 200  # 当前周期CR大于200
+    condition2 = df['Cr_%s' % str(n)].shift() <= 200  # 上个周期CR小于等于200
+    condition3 = df['bias36'] > df['bias36_ma']
+    condition4 = df['bias36'].shift() <= df['bias36_ma'].shift()
+    df.loc[condition1 & condition2 & condition3 & condition4, 'signal_long'] = 1  # 1代表做多
 
-    # === 找出做多平仓信号
-    condition1 = df['close'] < df['median']  # 当前K线的收盘价 < 中轨
-    condition2 = df['close'].shift(1) >= df['median'].shift(1)  # 之前K线的收盘价 >= 中轨
-    df.loc[condition1 & condition2, 'signal_long'] = 0  # 将产生平仓信号当天的signal设置为0，0代表平仓
-
-    # === 找出做空信号
-    # 价格低于下轨且RSI低于25，空投，损益比1：1.5-2
-    condition1 = df['close'] < df['lower']  # 当前K线的收盘价 < 下轨
-    condition2 = df['close'].shift(1) >= df['lower'].shift(1)  # 之前K线的收盘价 >= 下轨
-    condition3 = df['rsi'] <= 25
-    df.loc[condition1 & condition2 & condition3, 'signal_short'] = -1  # 将产生做空信号的那根K线的signal设置为-1，-1代表做空
-
-    # === 找出做空平仓信号
-    condition1 = df['close'] > df['median']  # 当前K线的收盘价 > 中轨
-    condition2 = df['close'].shift(1) <= df['median'].shift(1)  # 之前K线的收盘价 <= 中轨
-    df.loc[condition1 & condition2, 'signal_short'] = 0  # 将产生平仓信号当天的signal设置为0，0代表平仓
+    # === 找出做空信号 CR 下穿 50，三六乖离下穿其均线
+    condition1 = df['Cr_%s' % str(n)] < 50  # 当前周期CR小于50
+    condition2 = df['Cr_%s' % str(n)].shift() >= 50  # 上个周期CR大于等于50
+    condition3 = df['bias36'] < df['bias36_ma']
+    condition4 = df['bias36'].shift() >= df['bias36_ma'].shift()
+    df.loc[condition1 & condition2 & condition3 & condition4, 'signal_short'] = -1  # -1代表做空
 
     # ===== 合并做多做空信号，去除重复信号
     # === 合并做多做空信号
@@ -458,8 +436,110 @@ def signal_imi_para_list(n_list=generate_fibonacci_sequence(2, 100)):
     temp = temp[temp['signal'] != temp['signal'].shift(1)]  # 筛选出当前周期与上个周期持仓信号不一致的，即去除重复信号
     df['signal'] = temp['signal']  # 将处理后的signal覆盖到原始数据的signal列
 
-    # ===== 删除无关变量
-    df.drop(['std', 'signal_long', 'signal_short'], axis=1, inplace=True)  # 删除std、signal_long、signal_short列
+    # ===== 止盈止损
+    # 校验当前的交易是否需要进行止盈止损
+    df = process_stop_loss_close(df, proportion, leverage_rate=leverage_rate)  # 调用函数，判断是否需要止盈止损，df需包含signal列
+
+    return df
+
+
+def signal_bias36_cr_para_list(n_list=generate_fibonacci_sequence(2, 100),
+                              bias36_n_list=generate_fibonacci_sequence(2, 100)):
+    """
+
+    :param n_list: N值的列表
+    :param bias36_n_list:  bias36 N值的列表
+    :return:
+    """
+    # ===== 构建遍历的列表
+    para = []  # 定义一个新的列表，用于存储遍历参数
+
+    # === 遍历参数
+    for n in n_list:  # 遍历n的参数
+        for bias36_n in bias36_n_list:  # 遍历bias36 n的参数
+            para.append([int(n), int(bias36_n)])  # 将参数累加到para_list
+    # ===== 返回参数列表
+    return para
+
+def signal_CR_FI(df, para=[20, 0.05], proportion=1, leverage_rate=1):
+    """
+      指标名称 FI
+      指标描述 N=13
+      FI=(CLOSE-REF(CLOSE,1))*VOLUME
+      FIMA=EMA(FI,N)
+      FI 用价格的变化来衡量价格的趋势，用成交量大小来衡量趋势的强
+      弱。我们先对 FI 取移动平均，当均线上穿 0 线时产生买入信号，下
+      穿 0 线时产生卖出信号。
+
+      :return: 最终输出的df中，新增字段：signal，记录发出的交易信号
+    :param df: 原始数据
+    :param para: siganl计算的参数
+    :param proportion: 止损比例
+    :param leverage_rate: 杠杆倍数
+    :return:
+    """
+    # ===== 获取策略参数
+    n = para[0]  # 获取参数n，即para第一个元素
+    m = para[1]  # 获取参数bias_pct，即para第二个元素
+
+    # ===== 计算指标
+    # 计算均线
+    # df['median'] = df['close'].rolling(n, min_periods=1).mean()  # 计算收盘价n个周期的均线，如果K线数据小于n就用K线的数量进行计算
+    # df['bias'] = df['close'] / df['median'] - 1  # 计算bias
+
+    df['TYP'] = (df['high'] + df['low'] + df['close']) / 3  # 计算TYP
+    df['H'] = np.where(df['high'] - df['TYP'].shift(1) > 0, df['high'] - df['TYP'].shift(1), 0)  # 计算H
+    df['L'] = np.where(df['TYP'].shift(1) - df['low'] > 0, df['TYP'].shift(1) - df['low'], 0)  # 计算L
+    df['Cr_%s' % (n)] = df['H'].rolling(n).sum() / df['L'].rolling(n, min_periods=1).sum() * 100  # 计算CR因子
+
+    # ===== 找出交易信号
+    # === 找出做多信号 CR 上穿 200
+    condition1 = df['Cr_%s' % str(n)] > 200  # 当前周期CR大于200
+    condition2 = df['Cr_%s' % str(n)].shift() <= 200  # 上个周期CR小于等于200
+    df.loc[condition1 & condition2, 'signal_long'] = 1  # 1代表做多
+
+    # === 找出做空信号 CR 下穿 50
+    condition1 = df['Cr_%s' % str(n)] < 50  # 当前周期CR小于50
+    condition2 = df['Cr_%s' % str(n)].shift() >= 50  # 上个周期CR大于等于50
+    df.loc[condition1 & condition2, 'signal_short'] = -1  # -1代表做空
+
+    # ===== 合并做多做空信号，去除重复信号
+    # === 合并做多做空信号
+    df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1, min_count=1,
+                                                           skipna=True)  # 合并多空信号，即signal_long与signal_short相加，得到真实的交易信号
+    # === 去除重复信号
+    temp = df[df['signal'].notnull()][['signal']]  # 筛选siganla不为空的数据，并另存一个变量
+    temp = temp[temp['signal'] != temp['signal'].shift(1)]  # 筛选出当前周期与上个周期持仓信号不一致的，即去除重复信号
+    df['signal'] = temp['signal']  # 将处理后的signal覆盖到原始数据的signal列
+
+
+
+    # ===计算均线。所有的指标，都要使用复权价格进行计算。
+    df['FI'] = (df['close'] - df['close'].shift(1)) * df['volume']
+    df['FIMA'] = df['FI'].rolling(m, min_periods=1).mean()
+
+    # # ===找出做多信号
+    # condition1 = df['FIMA'] > 0  # FI均线上穿0线
+    # condition2 = df['FIMA'].shift(1) <= 0  # 上一周期的均线 <= 0
+    # df.loc[condition1 & condition2, 'signal'] = 1  # 将产生做多信号的那根K线的signal设置为1，1代表做多
+    #
+    # # ===找出做多平仓信号
+    # condition1 = df['FIMA'] < 0  # FI均线下穿0线
+    # condition2 = df['FIMA'].shift(1) >= 0  # 上一周期的均线 >= 0
+    # df.loc[...
+    # ===== 根据bias，修改开仓时间
+    df['temp'] = df['signal']
+
+    # === 将原始信号做多时，当bias大于阀值，设置为空
+    condition1 = (df['signal'] == 1)  # signal为1
+    condition2 = (df['FIMA'] < 0)  # bias大于bias_pct
+    df.loc[condition1 & condition2, 'temp'] = None  # 将signal设置为空
+
+    # === 将原始信号做空时，当bias小于阀值，设置为空
+    condition1 = (df['signal'] == -1)  # signal为-1
+    condition2 = (df['FIMA'] < 0)  # bias小于 (-1 * bias_pct)
+    df.loc[condition1 & condition2, 'temp'] = None  # 将signal设置为空
+    df['signal'] = df['temp']
 
     # ===== 止盈止损
     # 校验当前的交易是否需要进行止盈止损
@@ -575,5 +655,6 @@ def signal_bolling_rsi_para_list(m_list=range(20, 1000 + 20, 20), n_list=[i / 10
                 para_list.append(para)  # 将参数累加到para_list
     # ===== 返回参数列表
     return para_list
+
 
 

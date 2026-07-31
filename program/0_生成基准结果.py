@@ -90,7 +90,7 @@ def calculate_by_one_loop(symbol):
 
 if __name__ == '__main__':
     # ==== 循环指定的时间周期
-    for rule_type in ['4H']:
+    for rule_type in rule_types:
 
         # ==== 回测主程序
         start_time = datetime.now()  # 标记开始时间
